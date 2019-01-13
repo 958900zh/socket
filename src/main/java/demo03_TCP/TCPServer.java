@@ -1,14 +1,21 @@
 package demo03_TCP;
 
+import javax.tools.Tool;
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 
 public class TCPServer {
 
+    private static final int PORT = 20000;
+
     public static void main(String[] args) throws IOException {
-        // 创建ServerSocket对象，并设置开启的端口号，客户端通过此端口号进行数据传输
-        ServerSocket serverSocket = new ServerSocket(8888);
+
+        ServerSocket serverSocket = createServerSocket();
+
+        initServerSocket(serverSocket);
+
+        serverSocket.bind(new InetSocketAddress(Inet4Address.getLocalHost(), PORT), 50);
+
         System.out.println("服务端已启动");
 
         for (; ; ) {
@@ -18,6 +25,23 @@ public class TCPServer {
             ClientHandler clientHandler = new ClientHandler(client);
             clientHandler.start();
         }
+    }
+
+    private static void initServerSocket(ServerSocket serverSocket) throws SocketException {
+        serverSocket.setReuseAddress(true);
+
+        serverSocket.setReceiveBufferSize(64 * 1024 * 1024);
+
+        // 设置 accept 的超时时间
+//        serverSocket.setSoTimeout(2000);
+
+        serverSocket.setPerformancePreferences(1, 1, 1);
+    }
+
+    private static ServerSocket createServerSocket() throws IOException {
+        ServerSocket serverSocket = new ServerSocket();
+
+        return serverSocket;
     }
 
     /**
@@ -34,28 +58,24 @@ public class TCPServer {
         public void run() {
             System.out.println("新的客户端已经连接 IP: " + socket.getInetAddress() + ", PORT: " + socket.getPort());
             try {
-                // 获取socket的输入流（客户端发出的数据），并转换为BufferedReader
+                // 获取socket的输入流（客户端发出的数据）
                 InputStream inputStream = socket.getInputStream();
-                BufferedReader socketInput = new BufferedReader(new InputStreamReader(inputStream));
 
-                // 获取socket的输出流（写回到客户端的数据），并转换为PrintStream
+                // 获取socket的输出流（写回到客户端的数据）
                 OutputStream outputStream = socket.getOutputStream();
-                PrintStream socketOutput = new PrintStream(outputStream);
 
-                boolean flag = true;
-                do {
-                    String receiveMsg = socketInput.readLine();
-                    if ("bey".equalsIgnoreCase(receiveMsg)) {
-                        flag = false;
-                        socketOutput.println("bey");
-                    } else {
-                        System.out.println("客户端发来的数据是：" + receiveMsg);
-                        socketOutput.println(receiveMsg.length());
-                    }
-                } while (flag);
+                byte[] buffer = new byte[128];
+                int read = inputStream.read(buffer);
+                if (read > 0) {
+                    System.out.println("收到数量: " + read + " 数据: " + Tools.byteArraysToInt(buffer));
+                    outputStream.write(buffer, 0, read);
+                } else {
+                    System.out.println("没有收到: " + read);
+                    outputStream.write(Tools.intToByteArray(0));
+                }
 
-                socketInput.close();
-                socketOutput.close();
+                inputStream.close();
+                outputStream.close();
             } catch (IOException e) {
                 System.out.println("连接异常断开");
             } finally {
