@@ -1,7 +1,8 @@
 package demo03_TCP;
 
-import javax.tools.Tool;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.*;
 
 public class TCPServer {

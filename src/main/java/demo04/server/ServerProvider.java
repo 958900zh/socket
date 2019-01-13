@@ -57,17 +57,17 @@ public class ServerProvider {
                     byte[] clientData = receivePacket.getData();
                     boolean isValid = clientDataLen >= (UDPConstants.HEADER.length + 2 + 4) && ByteUtils.startsWith(clientData, UDPConstants.HEADER);
 
-                    System.out.println("ServerProvider receive from ip: " + clientIp + ", port: " + clientPort + "dataValid: " + isValid);
+                    System.out.println("ServerProvider receive from ip: " + clientIp + ", port: " + clientPort + ", dataValid: " + isValid);
                     if (!isValid)
                         continue;
 
                     // 解析命令与回送端口
                     int index = UDPConstants.HEADER.length;
-                    short cmd = (short) (((clientData[index++] << 8) & 0xFF) | (clientData[index++] & 0xFF));
-                    int responsePort = (((clientData[index++] << 24) & 0xFF) |
-                            ((clientData[index++] << 16) & 0xFF) |
-                            ((clientData[index++] << 8) & 0xFF) |
-                            (clientData[index] & 0xFF));
+                    short cmd = (short) (((clientData[index++] & 0xFF) << 8) | (clientData[index++] & 0xFF));
+                    int responsePort = (clientData[index++] & 0xFF) << 24 |
+                            (clientData[index++] & 0xFF) << 16 |
+                            (clientData[index++] & 0xFF) << 8 |
+                            (clientData[index] & 0xFF);
 
                     // 判断合法性
                     if (cmd == 1 && responsePort > 0) {
@@ -78,9 +78,9 @@ public class ServerProvider {
                         byteBuffer.put(sn);
                         DatagramPacket responsePacket = new DatagramPacket(buffer, byteBuffer.position(), receivePacket.getAddress(), responsePort);
                         ds.send(responsePacket);
-                        System.out.println("ServerProvider response to: " + clientIp + ", port: " + clientPort);
+                        System.out.println("ServerProvider response to: " + clientIp + ", port: " + responsePort);
                     } else {
-                        System.out.println("ServerProvider receive cmd nonsupport; cmd: " + cmd + ", port: " + port);
+                        System.out.println("ServerProvider receive cmd nonsupport; cmd: " + cmd + ", port: " + responsePort);
                     }
                 }
             } catch (Exception e) {

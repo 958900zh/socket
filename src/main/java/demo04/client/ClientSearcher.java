@@ -1,12 +1,11 @@
 package demo04.client;
 
 import demo04.bean.ServerInfo;
+import demo04.clink.utils.ByteUtils;
 import demo04.constants.UDPConstants;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketException;
+import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +42,7 @@ public class ClientSearcher {
         return null;
     }
 
-    private static void sendBroadcast() throws SocketException {
+    private static void sendBroadcast() throws IOException {
         System.out.println("UDPSearcher sendBroadcast started...");
 
         DatagramSocket ds = new DatagramSocket();
@@ -53,7 +52,14 @@ public class ClientSearcher {
         byteBuffer.putShort((short) 1);
         byteBuffer.putInt(LISTEN_PORT);
 
-//        DatagramPacket requestPack
+        DatagramPacket requestPack = new DatagramPacket(byteBuffer.array(), byteBuffer.position() + 1);
+        requestPack.setAddress(InetAddress.getByName("255.255.255.255"));
+        requestPack.setPort(UDPConstants.PORT_SERVER);
+
+        ds.send(requestPack);
+        ds.close();
+
+        System.out.println("UDPSearcher sendBroadcast finished...");
     }
 
     private static Listener listen(CountDownLatch receiveLatch) throws InterruptedException {
@@ -92,18 +98,41 @@ public class ClientSearcher {
 
                 while (!done) {
                     ds.receive(receivePacket);
-                    // todo
+
+                    String ip = receivePacket.getAddress().getHostAddress();
+                    int port = receivePacket.getPort();
+                    int dataLen = receivePacket.getLength();
+                    byte[] data = receivePacket.getData();
+                    boolean isValid = dataLen >= minLen && ByteUtils.startsWith(data, UDPConstants.HEADER);
+
+                    System.out.println("UDPSearcher receive from ip: " + ip + ", port: " + port + "dataValid: " + isValid);
+
+                    if (!isValid)
+                        continue;
+
+                    ByteBuffer byteBuffer = ByteBuffer.wrap(buffer, UDPConstants.HEADER.length, dataLen);
+                    short cmd = byteBuffer.getShort();
+                    int serverPort = byteBuffer.getInt();
+                    if (cmd != 2 || serverPort <= 0) {
+                        System.out.println("ClientSearcher receive cmd nonsupport; cmd: " + cmd + ", port: " + port);
+                        continue;
+                    }
+                    String sn = new String(buffer, minLen, dataLen - minLen);
+                    ServerInfo serverInfo = new ServerInfo(sn, serverPort, ip);
+                    serverInfoList.add(serverInfo);
+                    receiveLatch.countDown();
                 }
             } catch (IOException e) {
-                e.printStackTrace();
             } finally {
                 close();
             }
+            System.out.println("UDPSearcher listener finished...");
         }
 
         public List<ServerInfo> getServerAndClose() {
-            // todo
-            return null;
+            done = true;
+            close();
+            return serverInfoList;
         }
 
         private void close() {
