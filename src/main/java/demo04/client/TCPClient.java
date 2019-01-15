@@ -1,9 +1,12 @@
 package demo04.client;
 
 import demo04.bean.ServerInfo;
+import demo04.clink.utils.CloseUtils;
 
 import java.io.*;
-import java.net.*;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 public class TCPClient {
 
@@ -16,7 +19,10 @@ public class TCPClient {
         System.out.println("【服务端】 IP: " + socket.getInetAddress() + ", PORT: " + socket.getPort());
 
         try {
-            send(socket);
+            ReadHandler readHandler = new ReadHandler(socket.getInputStream());
+            readHandler.start();
+            write(socket);
+            readHandler.exit();
         } catch (Exception e) {
             System.out.println("连接异常断开");
         }
@@ -24,26 +30,61 @@ public class TCPClient {
         System.out.println("客户端已退出");
     }
 
-    private static void send(Socket socket) throws IOException {
+    private static void write(Socket socket) throws IOException {
         BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
 
         PrintStream socketOutput = new PrintStream(socket.getOutputStream());
 
-        BufferedReader socketInput = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-        boolean flag = true;
         do {
             String message = input.readLine();
             socketOutput.println(message);
 
-            String returnMsg = socketInput.readLine();
-            if ("bey".equalsIgnoreCase(returnMsg))
-                flag = false;
-            else
-                System.out.println("服务端返回：" + returnMsg);
-        } while (flag);
+            if ("bey!".equalsIgnoreCase(message))
+                break;
+        } while (true);
 
-        socketInput.close();
         socketOutput.close();
+    }
+
+    static class ReadHandler extends Thread {
+
+        private boolean done = false;
+        private final InputStream inputStream;
+
+        public ReadHandler(InputStream inputStream) {
+            this.inputStream = inputStream;
+        }
+
+        @Override
+        public void run() {
+
+            try {
+                BufferedReader input = new BufferedReader(new InputStreamReader(inputStream));
+                do {
+                    String receiveMsg;
+                    try {
+                        receiveMsg = input.readLine();
+                    } catch (SocketTimeoutException e) {
+                        continue;
+                    }
+                    if (receiveMsg == null) {
+                        System.out.println("客户端已经无法读取数据");
+                        break;
+                    }
+                    System.out.println(receiveMsg);
+                } while (!done);
+            } catch (Exception e) {
+                if (!done) {
+                    System.out.println("连接异常断开");
+                }
+            } finally {
+                CloseUtils.close(inputStream);
+            }
+        }
+
+        void exit() {
+            done = true;
+            CloseUtils.close(inputStream);
+        }
     }
 }

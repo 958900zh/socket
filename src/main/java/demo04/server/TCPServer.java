@@ -2,10 +2,7 @@ package demo04.server;
 
 import demo04.server.handle.ClientHandler;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -13,13 +10,17 @@ import java.util.List;
 
 public class TCPServer {
     private final int port;
-    private ClientListener mListener;
-    private List<ClientHandler> clientHandlerList = new ArrayList<>();
+    private ClientListener mListener; // 开启一个线程来监听客户端的连接
+    private List<ClientHandler> clientHandlerList = new ArrayList<>(); // 保存所有已连接的客户端
 
     public TCPServer(int port) {
         this.port = port;
     }
 
+    /**
+     * 在开启监听的时候可能会抛出异常
+     * 正常启动 返回true，否则 返回false
+     */
     public boolean start() {
         try {
             ClientListener listener = new ClientListener(port);
@@ -32,6 +33,9 @@ public class TCPServer {
         return true;
     }
 
+    /**
+     * 首先退出服务端，然后依次退出已连接的客户端，最后清空list
+     */
     public void stop() {
         if (mListener != null)
             mListener.exit();
@@ -43,13 +47,17 @@ public class TCPServer {
         clientHandlerList.clear();
     }
 
+    /**
+     * 依次向已连接的客户端发送消息
+     * @param str 要发送的消息
+     */
     public void broadcast(String str) {
         for (ClientHandler handler : clientHandlerList) {
             handler.send(str);
         }
     }
 
-    private static class ClientListener extends Thread {
+    private class ClientListener extends Thread {
         private boolean done = false;
         private ServerSocket serverSocket;
 
@@ -64,16 +72,28 @@ public class TCPServer {
             do {
                 Socket client;
                 try {
+                    // 接收客户端的连接，如果发生异常，则重新开始
                     client = serverSocket.accept();
                 } catch (IOException e) {
                     continue;
                 }
-                ClientHandler clientHandler = new ClientHandler(client);
-                clientHandler.readToPrint();
+                ClientHandler clientHandler;
+                try {
+                    clientHandler = new ClientHandler(client, handler -> clientHandlerList.remove(handler));
+                    // 把客户端的连接添加到list中
+                    clientHandlerList.add(clientHandler);
+                    // 开启一个线程来处理从客户端读取到的信息
+                    clientHandler.readToPrint();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             } while (!done);
             System.out.println("服务器已关闭");
         }
 
+        /**
+         * 关闭操作，将done置为true，释放服务端连接资源
+         */
         void exit() {
             done = true;
             try {

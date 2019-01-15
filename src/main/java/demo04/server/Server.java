@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 public class Server {
 
     public static void main(String[] args) throws IOException {
+        // 开启TCP服务
         TCPServer tcpServer = new TCPServer(TCPConstants.PORT_SERVER);
 
         boolean isSucceed = tcpServer.start();
@@ -24,7 +25,7 @@ public class Server {
         do {
             str = bufferedReader.readLine();
             tcpServer.broadcast(str);
-        } while ("bey!".equalsIgnoreCase(str));
+        } while (!"bey!".equalsIgnoreCase(str));
 
         ServerProvider.stop();
         tcpServer.stop();
