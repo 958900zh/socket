@@ -1,4 +1,4 @@
-package demo04.constants;
+package ChatRoom.common.constants;
 
 public class UDPConstants {
     // 公用头部

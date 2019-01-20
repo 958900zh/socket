@@ -1,4 +1,4 @@
-package demo04.bean;
+package ChatRoom.common.bean;
 
 public class ServerInfo {
 

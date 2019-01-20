@@ -1,6 +1,6 @@
-package demo04.server.handle;
+package ChatRoom.sample_server.handle;
 
-import demo04.clink.utils.CloseUtils;
+import ChatRoom.common.clink.utils.CloseUtils;
 
 import java.io.*;
 import java.net.Socket;
@@ -12,19 +12,26 @@ public class ClientHandler {
     private final Socket socket; // 保存客户端的连接对象
     private final ClientReadHandler readHandler; //
     private final ClientWriteHandler writeHandler;
-    private final CloseNotify closeNotify;
+    private final ClientHandlerCallback clientHandlerCallback;
+    private final String clientInfo;
 
     /**
      * 用于处理客户端的连接
-     * @param socket 客户端的连接对象
-     * @param closeNotify {@link CloseNotify} 回调方法，当客户端连接出现异常时被调用。
+     *
+     * @param socket                客户端的连接对象
+     * @param clientHandlerCallback {@link ClientHandlerCallback} 回调方法，当客户端连接出现异常时被调用。
      */
-    public ClientHandler(Socket socket, CloseNotify closeNotify) throws IOException {
+    public ClientHandler(Socket socket, ClientHandlerCallback clientHandlerCallback) throws IOException {
         this.socket = socket;
         this.readHandler = new ClientReadHandler(socket.getInputStream());
         this.writeHandler = new ClientWriteHandler(socket.getOutputStream());
-        this.closeNotify = closeNotify;
-        System.out.println("新客户端连接：ip: " + socket.getInetAddress() + ", port: " + socket.getPort());
+        this.clientHandlerCallback = clientHandlerCallback;
+        this.clientInfo = "Address[" + socket.getInetAddress() + "] Port[" + socket.getPort() + "]";
+        System.out.println("新客户端连接：" + clientInfo);
+    }
+
+    public String getClientInfo() {
+        return clientInfo;
     }
 
     public void exit() {
@@ -44,11 +51,15 @@ public class ClientHandler {
 
     private void exitBySelf() {
         exit();
-        closeNotify.onSelfClosed(this);
+        clientHandlerCallback.onSelfClosed(this);
     }
 
-    public interface CloseNotify {
+    public interface ClientHandlerCallback {
+        // 自身关闭通知
         void onSelfClosed(ClientHandler handler);
+
+        // 收到消息时通知
+        void onNewMessageArrived(ClientHandler clientHandler, String message);
     }
 
     /**
@@ -74,7 +85,7 @@ public class ClientHandler {
                         ClientHandler.this.exitBySelf();
                         break;
                     }
-                    System.out.println(receiveMsg);
+                    clientHandlerCallback.onNewMessageArrived(ClientHandler.this, receiveMsg);
                 } while (!done);
             } catch (Exception e) {
                 if (!done) {

@@ -1,8 +1,8 @@
-package demo04.client;
+package ChatRoom.sample_client;
 
-import demo04.bean.ServerInfo;
-import demo04.clink.utils.ByteUtils;
-import demo04.constants.UDPConstants;
+import ChatRoom.common.bean.ServerInfo;
+import ChatRoom.common.clink.utils.ByteUtils;
+import ChatRoom.common.constants.UDPConstants;
 
 import java.io.IOException;
 import java.net.*;

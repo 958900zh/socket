@@ -1,4 +1,4 @@
-package demo04.clink.utils;
+package ChatRoom.common.clink.utils;
 
 public class ByteUtils {
 

@@ -1,4 +1,4 @@
-package demo04.constants;
+package ChatRoom.common.constants;
 
 public class TCPConstants {
     // 服务器固化TCP接收端口

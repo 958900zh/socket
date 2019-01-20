@@ -1,6 +1,6 @@
-package demo04.client;
+package ChatRoom.sample_client;
 
-import demo04.bean.ServerInfo;
+import ChatRoom.common.bean.ServerInfo;
 
 import java.io.IOException;
 

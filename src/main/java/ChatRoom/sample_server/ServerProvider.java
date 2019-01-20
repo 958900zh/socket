@@ -1,7 +1,7 @@
-package demo04.server;
+package ChatRoom.sample_server;
 
-import demo04.clink.utils.ByteUtils;
-import demo04.constants.UDPConstants;
+import ChatRoom.common.clink.utils.ByteUtils;
+import ChatRoom.common.constants.UDPConstants;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;

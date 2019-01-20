@@ -1,6 +1,6 @@
-package demo04.server;
+package ChatRoom.sample_server;
 
-import demo04.server.handle.ClientHandler;
+import ChatRoom.sample_server.handle.ClientHandler;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -8,7 +8,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-public class TCPServer {
+public class TCPServer implements ClientHandler.ClientHandlerCallback {
     private final int port;
     private ClientListener mListener; // 开启一个线程来监听客户端的连接
     private List<ClientHandler> clientHandlerList = new ArrayList<>(); // 保存所有已连接的客户端
@@ -49,12 +49,24 @@ public class TCPServer {
 
     /**
      * 依次向已连接的客户端发送消息
+     *
      * @param str 要发送的消息
      */
     public void broadcast(String str) {
         for (ClientHandler handler : clientHandlerList) {
             handler.send(str);
         }
+    }
+
+    @Override
+    public void onSelfClosed(ClientHandler handler) {
+        clientHandlerList.remove(handler);
+    }
+
+    @Override
+    public void onNewMessageArrived(ClientHandler clientHandler, String message) {
+        // 打印到屏幕
+        System.out.println("Receive-" + clientHandler.getClientInfo() + ":" + message);
     }
 
     private class ClientListener extends Thread {
@@ -79,7 +91,7 @@ public class TCPServer {
                 }
                 ClientHandler clientHandler;
                 try {
-                    clientHandler = new ClientHandler(client, handler -> clientHandlerList.remove(handler));
+                    clientHandler = new ClientHandler(client, TCPServer.this);
                     // 把客户端的连接添加到list中
                     clientHandlerList.add(clientHandler);
                     // 开启一个线程来处理从客户端读取到的信息

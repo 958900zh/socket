@@ -1,6 +1,6 @@
-package demo04.server;
+package ChatRoom.sample_server;
 
-import demo04.constants.TCPConstants;
+import ChatRoom.common.constants.TCPConstants;
 
 import java.io.BufferedReader;
 import java.io.IOException;

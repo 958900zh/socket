@@ -1,7 +1,7 @@
-package demo04.client;
+package ChatRoom.sample_client;
 
-import demo04.bean.ServerInfo;
-import demo04.clink.utils.CloseUtils;
+import ChatRoom.common.bean.ServerInfo;
+import ChatRoom.common.clink.utils.CloseUtils;
 
 import java.io.*;
 import java.net.InetSocketAddress;
