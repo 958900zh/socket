@@ -117,6 +117,8 @@ public class ClientHandler {
         }
 
         public void send(String str) {
+            if (done)
+                return;
             executorService.submit(new WriteRunnable(str));
         }
 

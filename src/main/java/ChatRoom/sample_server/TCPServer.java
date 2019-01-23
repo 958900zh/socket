@@ -7,14 +7,18 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class TCPServer implements ClientHandler.ClientHandlerCallback {
     private final int port;
     private ClientListener mListener; // 开启一个线程来监听客户端的连接
     private List<ClientHandler> clientHandlerList = new ArrayList<>(); // 保存所有已连接的客户端
+    private final ExecutorService forwardingThreadPoolExecutor;
 
     public TCPServer(int port) {
         this.port = port;
+        this.forwardingThreadPoolExecutor = Executors.newSingleThreadExecutor();
     }
 
     /**
@@ -40,11 +44,14 @@ public class TCPServer implements ClientHandler.ClientHandlerCallback {
         if (mListener != null)
             mListener.exit();
 
-        for (ClientHandler handler : clientHandlerList) {
-            handler.exit();
+        synchronized (TCPServer.this) {
+            for (ClientHandler handler : clientHandlerList) {
+                handler.exit();
+            }
         }
 
         clientHandlerList.clear();
+        forwardingThreadPoolExecutor.shutdownNow();
     }
 
     /**
@@ -52,14 +59,14 @@ public class TCPServer implements ClientHandler.ClientHandlerCallback {
      *
      * @param str 要发送的消息
      */
-    public void broadcast(String str) {
+    public synchronized void broadcast(String str) {
         for (ClientHandler handler : clientHandlerList) {
             handler.send(str);
         }
     }
 
     @Override
-    public void onSelfClosed(ClientHandler handler) {
+    public synchronized void onSelfClosed(ClientHandler handler) {
         clientHandlerList.remove(handler);
     }
 
@@ -67,6 +74,12 @@ public class TCPServer implements ClientHandler.ClientHandlerCallback {
     public void onNewMessageArrived(ClientHandler clientHandler, String message) {
         // 打印到屏幕
         System.out.println("Receive-" + clientHandler.getClientInfo() + ":" + message);
+        forwardingThreadPoolExecutor.submit(() -> {
+            for (ClientHandler handler : clientHandlerList) {
+                if (!handler.equals(clientHandler))
+                    handler.send(message);
+            }
+        });
     }
 
     private class ClientListener extends Thread {
@@ -92,8 +105,10 @@ public class TCPServer implements ClientHandler.ClientHandlerCallback {
                 ClientHandler clientHandler;
                 try {
                     clientHandler = new ClientHandler(client, TCPServer.this);
-                    // 把客户端的连接添加到list中
-                    clientHandlerList.add(clientHandler);
+                    synchronized (TCPServer.this) {
+                        // 把客户端的连接添加到list中
+                        clientHandlerList.add(clientHandler);
+                    }
                     // 开启一个线程来处理从客户端读取到的信息
                     clientHandler.readToPrint();
                 } catch (IOException e) {
